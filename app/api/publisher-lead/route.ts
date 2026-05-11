@@ -54,8 +54,7 @@ export async function POST(req: Request) {
 
   try {
     await resend.emails.send({
-      from: 'Slant Scanner <onboarding@resend.dev>',
-      // TODO: Switch from to a verified custom domain sender (e.g., leads@slantscanner.com) before launch
+      from: 'Slant Scanner <leads@slantscanner.info>',
       to,
       replyTo: email,
       subject: `Publisher pilot request — ${publisher}`,
