@@ -18,6 +18,13 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
   );
 }
 
+function scoreLabel(score: number): { label: string; description: string } {
+  if (score >= 75) return { label: 'Strongly Conservative', description: 'Faith-aligned, broadly safe for family audiences' };
+  if (score >= 55) return { label: 'Moderately Conservative', description: 'Some ideological tension areas' };
+  if (score >= 35) return { label: 'Mixed / Ambiguous', description: 'Significant ideological tension' };
+  return { label: 'Progressive-Leaning', description: 'Conflicts with conservative values' };
+}
+
 function ScoreBadge({ score, size = 'md' }: { score: number; size?: 'sm' | 'md' | 'lg' }) {
   const bg = score >= 65 ? '#E8F5EE' : score >= 45 ? '#FDF3DC' : '#FDEAEA';
   const text = score >= 65 ? '#2E7D52' : score >= 45 ? '#8A6A20' : '#B84040';
@@ -40,7 +47,10 @@ function ReportView({ report, onReset }: { report: ManuscriptReport; onReset: ()
         <p className="text-base text-[#6B6860] mb-4">{report.author}{report.genre ? ` · ${report.genre}` : ''}{report.estimatedWordCount ? ` · ${report.estimatedWordCount}` : ''}</p>
         <div className="flex items-center gap-4 flex-wrap">
           <ScoreBadge score={report.overallScore} size="md" />
-          <span className="text-xs tracking-[0.15em] uppercase text-[#6B6860]">Overall Slant Score</span>
+          <div>
+            <p className="text-sm font-semibold text-[#1A1A18]">{scoreLabel(report.overallScore).label}</p>
+            <p className="text-xs text-[#6B6860]">{scoreLabel(report.overallScore).description}</p>
+          </div>
           <button
             onClick={onReset}
             className="ml-auto text-xs text-[#6B6860] hover:text-[#1A1A18] underline underline-offset-2 transition-colors"
