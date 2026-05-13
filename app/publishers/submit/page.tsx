@@ -145,7 +145,7 @@ export default function SubmitPage() {
     if (fileRef.current) fileRef.current.value = '';
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const file = fileRef.current?.files?.[0];
     if (!file) { setError('Please select a manuscript file.'); return; }
@@ -160,8 +160,15 @@ export default function SubmitPage() {
 
     setState('analyzing');
 
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'https://booklean-backend-production.up.railway.app';
+    const publisherKey = process.env.NEXT_PUBLIC_PUBLISHER_API_KEY ?? '';
+
     try {
-      const res = await fetch('/api/analyze-manuscript', { method: 'POST', body: form });
+      const res = await fetch(`${backendUrl}/publisher/manuscript/analyze`, {
+        method: 'POST',
+        headers: { 'x-publisher-key': publisherKey },
+        body: form,
+      });
       const data = await res.json();
 
       if (!res.ok) {
