@@ -1,13 +1,16 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { CatalogTitleReport } from '../../catalog/types';
+import { cacheKey, getCached, setCached } from '@/lib/catalog-cache';
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
-// Per the Anthropic API guidance, default to Opus 4.8. For very large catalogs
-// where per-title latency/cost matters more than depth, this can be switched to
-// a faster model (e.g. claude-sonnet-5) — a deliberate tradeoff, not a default.
-const MODEL = 'claude-opus-4-8';
+// Sonnet 5 — matches the main app, and the right tier for per-title catalog
+// scans where a scan may cover hundreds of books. Thinking is adaptive-by-
+// default on Sonnet 5, so it's disabled explicitly: this is a bounded
+// structured-extraction task and thinking would add latency and tokens per
+// title. Bump ANALYSIS_VERSION in lib/catalog-cache.ts if this changes.
+const MODEL = 'claude-sonnet-5';
 
 const ANALYSIS_PROMPT = `You are Slant Scanner, a worldview-and-content analysis tool used by school and library staff to audit a book collection. You are given a book's title and author (and sometimes ISBN). Using your knowledge of the PUBLISHED book, return a structured JSON assessment from a conservative/traditional family-values perspective.
 
@@ -54,6 +57,11 @@ export async function POST(req: Request) {
   const isbn = (body.isbn ?? '').trim();
   if (!title) return Response.json({ error: 'title is required' }, { status: 400 });
 
+  // Shared cache: a book's analysis is identical for every school that scans it.
+  const key = cacheKey(title, author, isbn);
+  const cached = await getCached(key);
+  if (cached) return Response.json({ ...cached, cached: true });
+
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return Response.json({ error: 'Service not configured' }, { status: 500 });
 
@@ -66,6 +74,7 @@ export async function POST(req: Request) {
     const response = await client.messages.create({
       model: MODEL,
       max_tokens: 1200,
+      thinking: { type: 'disabled' },
       messages: [{ role: 'user', content: `${ANALYSIS_PROMPT}\n\n---BOOK---\n${meta}` }],
     });
     reportText = (response.content[0] as { type: string; text: string }).text;
@@ -105,5 +114,9 @@ export async function POST(req: Request) {
     cautions: Array.isArray(parsed.cautions) ? parsed.cautions.slice(0, 6) : [],
   };
 
-  return Response.json(report);
+  // Only cache confident analyses — an unrecognized title should be retried on a
+  // later scan rather than permanently remembered as "unknown".
+  if (report.recognized) await setCached(key, report);
+
+  return Response.json({ ...report, cached: false });
 }

@@ -10,7 +10,7 @@ const FREE_LIMIT = 25;
 const CONCURRENCY = 4;
 
 type Row = { title: string; author: string; isbn?: string };
-type Scanned = CatalogTitleReport & { _status: 'done' | 'error' };
+type Scanned = CatalogTitleReport & { _status: 'done' | 'error'; _cached?: boolean };
 
 // ── CSV column mapping (a library export won't use our exact headers) ─────────
 function pick(headers: string[], keys: string[]): string | null {
@@ -97,8 +97,8 @@ export default function CatalogPage() {
             body: JSON.stringify(row),
           });
           if (!res.ok) throw new Error();
-          const data: CatalogTitleReport = await res.json();
-          out[idx] = { ...data, _status: 'done' };
+          const data: CatalogTitleReport & { cached?: boolean } = await res.json();
+          out[idx] = { ...data, _status: 'done', _cached: data.cached };
         } catch {
           out[idx] = {
             title: row.title, author: row.author, isbn: row.isbn,
@@ -221,7 +221,11 @@ export default function CatalogPage() {
                         <tr className="border-b border-[#F0EEE9] hover:bg-[#FAF9F6] cursor-pointer" onClick={() => setOpenRow(openRow === idx ? null : idx)}>
                           <td className="px-4 py-3">
                             <p className="font-medium text-[#1A1A18]">{r.title}</p>
-                            <p className="text-xs text-[#8A8880]">{r.author || '—'}{r.confidence === 'insufficient' && !r.recognized ? ' · not recognized' : ''}</p>
+                            <p className="text-xs text-[#8A8880]">
+                              {r.author || '—'}
+                              {r.confidence === 'insufficient' && !r.recognized ? ' · not recognized' : ''}
+                              {r._cached ? ' · cached' : ''}
+                            </p>
                           </td>
                           <td className="px-3 py-3"><ScoreBadge score={r.overallScore} recognized={r.recognized} /></td>
                           <td className="px-3 py-3 text-xs text-[#6B6860]">{r.worldview}</td>
