@@ -7,6 +7,7 @@ import ThemeInventory from './_components/ThemeInventory';
 import AudienceFitTable from './_components/AudienceFitTable';
 import RiskFlagsList from './_components/RiskFlagsList';
 import ChannelRecs from './_components/ChannelRecs';
+import AiDetectionPanel from './_components/AiDetectionPanel';
 
 type UploadState = 'idle' | 'uploading' | 'analyzing' | 'done' | 'error';
 
@@ -114,6 +115,14 @@ function ReportView({ report, onReset }: { report: ManuscriptReport; onReset: ()
         <SectionHeading>Risk Flags</SectionHeading>
         <RiskFlagsList flags={report.riskFlags} />
       </section>
+
+      {/* AI Detection */}
+      {report.aiDetection && (
+        <section className="mb-12">
+          <SectionHeading>AI Detection</SectionHeading>
+          <AiDetectionPanel detection={report.aiDetection} />
+        </section>
+      )}
 
       {/* Methodology */}
       {report.methodology && (

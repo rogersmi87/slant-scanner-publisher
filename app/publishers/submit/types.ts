@@ -32,6 +32,24 @@ export type RiskFlag = {
   detail: string;
 };
 
+export type AiSignalDirection = 'toward-ai' | 'toward-human';
+
+export type AiSignal = {
+  signal: string;
+  observation: string;
+  direction: AiSignalDirection;
+  strength: 'Strong' | 'Moderate' | 'Weak';
+};
+
+export type AiDetection = {
+  likelihood: 'No Indicators' | 'Possible' | 'Likely' | 'Strong Indicators';
+  confidence: 'Low' | 'Medium' | 'High';
+  summary: string;
+  signals: AiSignal[];
+  recommendedAction: string;
+  disclaimer: string;
+};
+
 export type ManuscriptReport = {
   title: string;
   author: string;
@@ -55,5 +73,7 @@ export type ManuscriptReport = {
     deprioritize: string[];
   };
   riskFlags: RiskFlag[];
+  /** Absent on reports saved before AI detection shipped. */
+  aiDetection?: AiDetection;
   methodology: string;
 };
