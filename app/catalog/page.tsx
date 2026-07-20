@@ -146,6 +146,7 @@ export default function CatalogPage() {
   return (
     <div className="min-h-screen" style={{ background: '#F4F1EA', color: '#1A1A18' }}>
       <div className="max-w-5xl mx-auto px-6 py-12">
+        <a href="/" className="inline-block text-xs text-[#8A8880] hover:text-[#1A1A18] transition-colors mb-4">&larr; Slant Scanner home</a>
         <p className="text-[10px] tracking-[0.2em] uppercase text-[#8A8880] mb-3">Slant Scanner · Collection Audit</p>
         <h1 className="font-serif text-3xl font-semibold mb-2">Scan your library catalog for worldview &amp; content</h1>
         <p className="text-sm text-[#6B6860] max-w-2xl mb-8">

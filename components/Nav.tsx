@@ -20,6 +20,7 @@ export default function Nav() {
           <a href="#use-cases" className="text-sm text-[#6B6860] hover:text-[#1A1A18] transition-colors">Use cases</a>
           <a href="#pricing" className="text-sm text-[#6B6860] hover:text-[#1A1A18] transition-colors">Pricing</a>
           <a href="#faq" className="text-sm text-[#6B6860] hover:text-[#1A1A18] transition-colors">FAQ</a>
+          <Link href="/catalog" className="text-sm text-[#6B6860] hover:text-[#1A1A18] transition-colors">Schools &amp; libraries</Link>
           <a
             href="#lead-form"
             className="text-sm font-medium bg-[#1B2B4B] text-white px-4 py-2 rounded hover:bg-[#243a63] transition-colors"
@@ -52,6 +53,7 @@ export default function Nav() {
           <a href="#use-cases" onClick={() => setOpen(false)} className="text-sm text-[#6B6860]">Use cases</a>
           <a href="#pricing" onClick={() => setOpen(false)} className="text-sm text-[#6B6860]">Pricing</a>
           <a href="#faq" onClick={() => setOpen(false)} className="text-sm text-[#6B6860]">FAQ</a>
+          <Link href="/catalog" onClick={() => setOpen(false)} className="text-sm text-[#6B6860]">Schools &amp; libraries</Link>
           <a
             href="#lead-form"
             onClick={() => setOpen(false)}
