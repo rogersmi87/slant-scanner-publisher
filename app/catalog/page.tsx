@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useRef, Fragment } from 'react';
+import { useState, useMemo, useRef, useEffect, Fragment } from 'react';
 import Papa from 'papaparse';
 import { CatalogTitleReport, ContentFlags, FLAG_KEYS, FLAG_LABELS } from './types';
 
@@ -55,10 +55,48 @@ export default function CatalogPage() {
   const [sort, setSort] = useState<'score-asc' | 'score-desc' | 'title'>('score-asc');
   const [query, setQuery] = useState('');
   const [openRow, setOpenRow] = useState<number | null>(null);
+  const [limited, setLimited] = useState(false);
   const cancelRef = useRef(false);
 
+  // Email gate: remembered per browser so returning visitors skip it.
+  const LEAD_KEY = 'slantscanner_lead';
+  const [hydrated, setHydrated] = useState(false);
+  const [leadEmail, setLeadEmail] = useState('');
+  const [emailInput, setEmailInput] = useState('');
+  const [orgInput, setOrgInput] = useState('');
+  const [gateBusy, setGateBusy] = useState(false);
+  const [gateError, setGateError] = useState('');
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(LEAD_KEY);
+      if (saved) setLeadEmail(saved);
+    } catch { /* ignore */ }
+    setHydrated(true);
+  }, []);
+
+  const submitGate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const email = emailInput.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setGateError('Enter a valid email address.');
+      return;
+    }
+    setGateBusy(true); setGateError('');
+    // Capture is best-effort — a delivery/storage hiccup must not block the user.
+    try {
+      await fetch('/api/catalog-lead', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, org: orgInput.trim() || undefined }),
+      });
+    } catch { /* proceed anyway */ }
+    try { localStorage.setItem(LEAD_KEY, email); } catch { /* ignore */ }
+    setLeadEmail(email);
+    setGateBusy(false);
+  };
+
   const onFile = (file: File) => {
-    setError(''); setResults([]); setDone(0); setOverflow(0); setRows(null);
+    setError(''); setResults([]); setDone(0); setOverflow(0); setRows(null); setLimited(false);
     Papa.parse<Record<string, string>>(file, {
       header: true, skipEmptyLines: true,
       complete: (res) => {
@@ -84,7 +122,7 @@ export default function CatalogPage() {
 
   const scan = async () => {
     if (!rows) return;
-    setScanning(true); setResults([]); setDone(0); cancelRef.current = false;
+    setScanning(true); setResults([]); setDone(0); setLimited(false); cancelRef.current = false;
     const queue = [...rows.entries()];
     const out: Scanned[] = new Array(rows.length);
 
@@ -96,6 +134,7 @@ export default function CatalogPage() {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(row),
           });
+          if (res.status === 429) { setLimited(true); cancelRef.current = true; break; }
           if (!res.ok) throw new Error();
           const data: CatalogTitleReport & { cached?: boolean } = await res.json();
           out[idx] = { ...data, _status: 'done', _cached: data.cached };
@@ -153,8 +192,33 @@ export default function CatalogPage() {
           Upload a spreadsheet of titles and get a per-book worldview and content read — score, dominant worldview, age band, and content flags — that you can sort, filter, and export. Free sample covers the first {FREE_LIMIT} titles.
         </p>
 
+        {/* Email gate — shown before the uploader; remembered per browser */}
+        {!scanning && results.length === 0 && hydrated && !leadEmail && (
+          <form onSubmit={submitGate} className="bg-white rounded-lg border border-[#E2E0DA] p-6 mb-8 max-w-xl">
+            <h2 className="font-serif text-lg font-semibold mb-1">See your first {FREE_LIMIT} titles free</h2>
+            <p className="text-sm text-[#6B6860] mb-5">Tell us where to send your results and we&rsquo;ll unlock the scanner.</p>
+            <div className="flex flex-col gap-3">
+              <input
+                type="email" required value={emailInput} onChange={e => setEmailInput(e.target.value)}
+                placeholder="you@school.org"
+                className="text-sm px-3 py-2.5 rounded-md border border-[#E2E0DA] bg-white"
+              />
+              <input
+                type="text" value={orgInput} onChange={e => setOrgInput(e.target.value)}
+                placeholder="School or library name (optional)"
+                className="text-sm px-3 py-2.5 rounded-md border border-[#E2E0DA] bg-white"
+              />
+              {gateError && <p className="text-sm" style={{ color: '#B84040' }}>{gateError}</p>}
+              <button type="submit" disabled={gateBusy} className="text-sm font-medium px-5 py-2.5 rounded-md text-white disabled:opacity-60" style={{ background: '#1A1A18' }}>
+                {gateBusy ? 'Unlocking…' : 'Unlock the scanner →'}
+              </button>
+              <p className="text-[11px] text-[#8A8880]">We&rsquo;ll only use this to follow up about your catalog audit. No spam.</p>
+            </div>
+          </form>
+        )}
+
         {/* Upload */}
-        {!scanning && results.length === 0 && (
+        {!scanning && results.length === 0 && hydrated && leadEmail && (
           <div className="bg-white rounded-lg border border-[#E2E0DA] p-6 mb-8">
             <label className="block border-2 border-dashed border-[#E2E0DA] rounded-lg p-6 text-center cursor-pointer hover:border-[#C9C6BE] transition-colors">
               <input type="file" accept=".csv,text/csv" className="hidden" onChange={e => e.target.files?.[0] && onFile(e.target.files[0])} />
@@ -172,6 +236,16 @@ export default function CatalogPage() {
                 </button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Rate-limit notice */}
+        {limited && (
+          <div className="rounded-lg border p-4 mb-8" style={{ background: '#FDF3DC', borderColor: '#EAD9A8' }}>
+            <p className="text-sm" style={{ color: '#8A6A20' }}>
+              You&rsquo;ve reached the free scanning limit for now.{' '}
+              <a href="mailto:hello@getbooklean.com?subject=Slant%20Scanner%20full%20catalog%20audit" className="underline">Contact us</a> for a full-catalog audit, or try again later.
+            </p>
           </div>
         )}
 

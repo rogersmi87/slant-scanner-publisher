@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { CatalogTitleReport } from '../../catalog/types';
 import { cacheKey, getCached, setCached } from '@/lib/catalog-cache';
+import { clientIp, checkRateLimit } from '@/lib/rate-limit';
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
@@ -58,9 +59,20 @@ export async function POST(req: Request) {
   if (!title) return Response.json({ error: 'title is required' }, { status: 400 });
 
   // Shared cache: a book's analysis is identical for every school that scans it.
+  // Cache hits are free, so they're served before the rate limiter — only calls
+  // that will actually spend tokens are throttled.
   const key = cacheKey(title, author, isbn);
   const cached = await getCached(key);
   if (cached) return Response.json({ ...cached, cached: true });
+
+  // Abuse protection on the paid path (see lib/rate-limit.ts).
+  const rate = await checkRateLimit(clientIp(req));
+  if (!rate.ok) {
+    return Response.json(
+      { error: 'Scan limit reached. Contact us for a full-catalog audit.' },
+      { status: 429 },
+    );
+  }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return Response.json({ error: 'Service not configured' }, { status: 500 });
