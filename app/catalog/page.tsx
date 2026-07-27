@@ -169,6 +169,131 @@ export default function CatalogPage() {
     URL.revokeObjectURL(url);
   };
 
+  // Styled, print-to-PDF audit report — opens in a new tab with a Print button.
+  const exportReport = () => {
+    const esc = (s: unknown) => String(s ?? '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const recognized = results.filter(r => r.recognized);
+    const avg = recognized.length
+      ? Math.round(recognized.reduce((s, r) => s + r.overallScore, 0) / recognized.length) : null;
+    const green = recognized.filter(r => r.overallScore >= 65).length;
+    const amberN = recognized.filter(r => r.overallScore >= 45 && r.overallScore < 65).length;
+    const red = recognized.filter(r => r.overallScore < 45).length;
+    const withCautions = results.filter(r => r.cautions.length > 0).length;
+    const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    const badge = (score: number, ok: boolean) => {
+      if (!ok) return '<span class="score" style="background:#EFEEEA;color:#8A8880">—</span>';
+      const bg = score >= 65 ? '#E8F5EE' : score >= 45 ? '#FDF3DC' : '#FDEAEA';
+      const col = score >= 65 ? '#2E7D52' : score >= 45 ? '#8A6A20' : '#B84040';
+      return `<span class="score" style="background:${bg};color:${col}">${score}</span>`;
+    };
+
+    const ordered = [...results].sort((a, b) =>
+      a.recognized !== b.recognized ? (a.recognized ? -1 : 1) : a.overallScore - b.overallScore);
+
+    const rows = ordered.map((r, i) => {
+      const flags = FLAG_KEYS.filter(k => r.contentFlags[k] >= 1).map(k => {
+        const v = r.contentFlags[k];
+        const bg = v >= 3 ? '#FDEAEA' : v >= 2 ? '#FDF3DC' : '#EFEEEA';
+        const col = v >= 3 ? '#B84040' : v >= 2 ? '#8A6A20' : '#8A8880';
+        return `<span class="chip" style="background:${bg};color:${col}">${esc(FLAG_LABELS[k])} ${v}</span>`;
+      }).join(' ') || '<span class="muted">clean</span>';
+      return `<tr>
+        <td class="num">${i + 1}</td>
+        <td><div class="ttl">${esc(r.title)}</div><div class="sub">${esc(r.author || '—')}${r.recognized ? '' : ' · not recognized'}</div></td>
+        <td>${badge(r.overallScore, r.recognized)}</td>
+        <td class="sub">${esc(r.worldview)}</td>
+        <td class="sub">${esc(r.ageBand)}</td>
+        <td>${flags}</td>
+        <td class="sub caut">${r.cautions.length ? esc(r.cautions.join('; ')) : '—'}</td>
+      </tr>`;
+    }).join('');
+
+    const orgLine = orgInput.trim() ? `<p class="org">Prepared for ${esc(orgInput.trim())}</p>` : '';
+
+    const html = `<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Slant Scanner — Collection Audit Report</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#F4F1EA;color:#1A1A18;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.5}
+.wrap{max-width:900px;margin:0 auto;padding:44px 32px 64px}
+.print{position:fixed;top:16px;right:16px;background:#1A1A18;color:#fff;border:0;border-radius:8px;padding:10px 16px;font-size:13px;cursor:pointer}
+.eyebrow{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#8A8880;margin:0 0 8px}
+h1{font-family:Georgia,"Times New Roman",serif;font-size:30px;margin:0;font-weight:600;letter-spacing:-.01em}
+.org{font-family:Georgia,serif;font-size:16px;color:#6B6860;font-style:italic;margin:6px 0 0}
+.meta{font-size:13px;color:#8A8880;margin:8px 0 0}
+header{border-bottom:1px solid #E2E0DA;padding-bottom:22px;margin-bottom:24px}
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.card{background:#fff;border:1px solid #E2E0DA;border-radius:10px;padding:16px;text-align:center}
+.big{font-family:Georgia,serif;font-size:28px;font-weight:600}
+.lbl{font-size:10px;color:#8A8880;text-transform:uppercase;letter-spacing:.08em;margin-top:4px}
+.dist{margin-bottom:28px}
+.bar{display:flex;height:10px;border-radius:99px;overflow:hidden;background:#EFEEEA}
+.bar span{display:block}
+.legend{display:flex;gap:16px;font-size:12px;color:#6B6860;margin-top:8px;flex-wrap:wrap}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:middle}
+table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #E2E0DA;border-radius:10px;overflow:hidden;font-size:13px}
+thead th{text-align:left;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#8A8880;padding:11px 12px;border-bottom:1px solid #E2E0DA}
+tbody td{padding:10px 12px;border-bottom:1px solid #F0EEE9;vertical-align:top}
+tbody tr:last-child td{border-bottom:0}
+.num{color:#B8B5AD;font-size:11px;width:26px}
+.ttl{font-weight:600}
+.sub{color:#6B6860}
+.caut{color:#8A6A20;max-width:230px}
+.muted{color:#8A8880}
+.score{display:inline-block;min-width:34px;text-align:center;font-family:Georgia,serif;font-weight:600;padding:2px 8px;border-radius:6px}
+.chip{display:inline-block;font-size:11px;padding:1px 6px;border-radius:5px;margin:1px 2px 1px 0;white-space:nowrap}
+footer{margin-top:24px;font-size:11px;color:#8A8880;line-height:1.6}
+@media print{
+  body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .no-print{display:none!important}
+  .wrap{max-width:none;padding:0}
+  .card,tbody tr{break-inside:avoid}
+  @page{margin:14mm}
+}
+</style></head><body>
+<div class="wrap">
+  <button class="print no-print" onclick="window.print()">&#9993; Print / Save as PDF</button>
+  <header>
+    <p class="eyebrow">Slant Scanner &middot; Collection Audit</p>
+    <h1>Collection Audit Report</h1>
+    ${orgLine}
+    <p class="meta">${results.length} titles analyzed &middot; ${date}</p>
+  </header>
+  <section class="summary">
+    <div class="card"><div class="big">${results.length}</div><div class="lbl">Titles analyzed</div></div>
+    <div class="card"><div class="big">${recognized.length}</div><div class="lbl">Recognized</div></div>
+    <div class="card"><div class="big">${avg ?? '—'}</div><div class="lbl">Average score</div></div>
+    <div class="card"><div class="big">${withCautions}</div><div class="lbl">With cautions</div></div>
+  </section>
+  <div class="dist">
+    <div class="bar">
+      ${green ? `<span style="flex:${green};background:#2E7D52"></span>` : ''}
+      ${amberN ? `<span style="flex:${amberN};background:#C9A227"></span>` : ''}
+      ${red ? `<span style="flex:${red};background:#B84040"></span>` : ''}
+    </div>
+    <div class="legend">
+      <span><i style="background:#2E7D52"></i>${green} aligned (65+)</span>
+      <span><i style="background:#C9A227"></i>${amberN} mixed (45–64)</span>
+      <span><i style="background:#B84040"></i>${red} conflicts (&lt;45)</span>
+    </div>
+  </div>
+  <table>
+    <thead><tr><th></th><th>Title</th><th>Score</th><th>Worldview</th><th>Age</th><th>Content flags</th><th>Cautions</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <footer>Slant Scanner analysis is AI-generated editorial guidance, not an authoritative rating. Verify before collection decisions. Unrecognized titles are marked rather than guessed.<br>Generated ${date} &middot; slantscanner.com</footer>
+</div>
+</body></html>`;
+
+    const w = window.open('', '_blank');
+    if (!w) { alert('Please allow pop-ups to open the report.'); return; }
+    w.document.write(html);
+    w.document.close();
+  };
+
   const shown = useMemo(() => {
     let r = results.slice();
     if (query.trim()) {
@@ -273,7 +398,12 @@ export default function CatalogPage() {
                 <option value="score-desc">Highest score first</option>
                 <option value="title">Title A–Z</option>
               </select>
-              {!scanning && <button onClick={exportCsv} className="text-sm px-4 py-2 rounded-md border border-[#1A1A18] text-[#1A1A18] hover:bg-[#1A1A18] hover:text-white transition-colors">⬇ Export CSV</button>}
+              {!scanning && (
+                <>
+                  <button onClick={exportReport} className="text-sm px-4 py-2 rounded-md text-white bg-[#1A1A18] hover:opacity-90 transition-opacity">📄 Report</button>
+                  <button onClick={exportCsv} className="text-sm px-4 py-2 rounded-md border border-[#1A1A18] text-[#1A1A18] hover:bg-[#1A1A18] hover:text-white transition-colors">⬇ CSV</button>
+                </>
+              )}
             </div>
 
             <div className="bg-white rounded-lg border border-[#E2E0DA] overflow-hidden">
