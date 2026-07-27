@@ -38,11 +38,20 @@ export type CatalogTitleReport = {
   alignmentScore: number;
   /** Dominant worldview lens, one short phrase. */
   worldview: string;
+  /** Content-focused 1–2 sentence summary (shown in secular mode). */
+  contentSummary: string;
+  /** Worldview-focused 1–2 sentence summary (shown in faith mode). */
   worldviewSummary: string;
   ageBand: CatalogAgeBand;
   contentFlags: ContentFlags;
+  /** Per-flag examples: for each flagged category (level ≥1), a brief note of
+   *  what the book actually contains. Keyed by flag; only flagged keys present. */
+  flagNotes: Partial<Record<keyof ContentFlags, string>>;
   themes: string[];
-  cautions: string[];
+  /** Content-only cautions (violence/language/sexuality/substances/intensity) — shown in both modes. */
+  contentCautions: string[];
+  /** Worldview/spiritual/occult cautions — shown in faith mode only. */
+  worldviewCautions: string[];
 };
 
 export const FLAG_KEYS: (keyof ContentFlags)[] = [

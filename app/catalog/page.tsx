@@ -55,6 +55,7 @@ export default function CatalogPage() {
   const [sort, setSort] = useState<'score-asc' | 'score-desc' | 'title'>('score-asc');
   const [query, setQuery] = useState('');
   const [openRow, setOpenRow] = useState<number | null>(null);
+  const [openFlag, setOpenFlag] = useState<string | null>(null);
   const [limited, setLimited] = useState(false);
   const [faithBased, setFaithBased] = useState(true);
   const cancelRef = useRef(false);
@@ -145,10 +146,10 @@ export default function CatalogPage() {
           out[idx] = {
             title: row.title, author: row.author, isbn: row.isbn,
             recognized: false, confidence: 'insufficient', contentScore: 50, alignmentScore: 50,
-            worldview: 'Error', worldviewSummary: 'Analysis failed for this title.',
+            worldview: 'Error', contentSummary: 'Analysis failed for this title.', worldviewSummary: 'Analysis failed for this title.',
             ageBand: 'Adult',
             contentFlags: { violence: 0, language: 0, sexuality: 0, substances: 0, occult: 0, spiritual: 0 },
-            themes: [], cautions: [], _status: 'error',
+            flagNotes: {}, themes: [], contentCautions: [], worldviewCautions: [], _status: 'error',
           };
         }
         setDone(d => d + 1);
@@ -170,13 +171,17 @@ export default function CatalogPage() {
   // faith-based → Worldview Alignment. Both are always computed & cached.
   const scoreOf = (r: CatalogTitleReport) => (faithBased ? r.alignmentScore : r.contentScore);
   const scoreLabel = faithBased ? 'Alignment' : 'Content';
+  // Descriptive text tracks the lens too: secular sees content-only summary + content
+  // cautions; faith-based sees the worldview summary + content AND worldview cautions.
+  const summaryOf = (r: CatalogTitleReport) => (faithBased ? r.worldviewSummary : r.contentSummary);
+  const cautionsOf = (r: CatalogTitleReport) => (faithBased ? [...r.contentCautions, ...r.worldviewCautions] : r.contentCautions);
 
   const exportCsv = () => {
     const flagHead = activeFlags.map(k => FLAG_LABELS[k]);
-    const header = ['Title', 'Author', 'ISBN', 'Content suitability', 'Worldview alignment', 'Worldview', 'Age band', 'Confidence', ...flagHead, 'Cautions'];
+    const header = ['Title', 'Author', 'ISBN', 'Content suitability', 'Worldview alignment', 'Worldview', 'Age band', 'Confidence', ...flagHead, 'Content cautions', 'Worldview cautions'];
     const lines = results.map(r => [
       r.title, r.author, r.isbn ?? '', r.recognized ? r.contentScore : '', r.recognized ? r.alignmentScore : '', r.worldview, r.ageBand, r.confidence,
-      ...activeFlags.map(k => r.contentFlags[k]), r.cautions.join('; '),
+      ...activeFlags.map(k => r.contentFlags[k]), r.contentCautions.join('; '), r.worldviewCautions.join('; '),
     ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
     const blob = new Blob([[header.join(','), ...lines].join('\n')], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -194,7 +199,7 @@ export default function CatalogPage() {
     const green = recognized.filter(r => scoreOf(r) >= 65).length;
     const amberN = recognized.filter(r => scoreOf(r) >= 45 && scoreOf(r) < 65).length;
     const red = recognized.filter(r => scoreOf(r) < 45).length;
-    const withCautions = results.filter(r => r.cautions.length > 0).length;
+    const withCautions = results.filter(r => cautionsOf(r).length > 0).length;
     const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     const lensNote = faithBased
       ? 'Scored for a faith-based institution — worldview &amp; spiritual content are weighed.'
@@ -227,7 +232,7 @@ export default function CatalogPage() {
         <td class="sub">${esc(r.worldview)}</td>
         <td class="sub">${esc(r.ageBand)}</td>
         <td>${flags}</td>
-        <td class="sub caut">${r.cautions.length ? esc(r.cautions.join('; ')) : '—'}</td>
+        <td class="sub caut">${cautionsOf(r).length ? esc(cautionsOf(r).join('; ')) : '—'}</td>
       </tr>`;
     }).join('');
 
@@ -470,16 +475,33 @@ footer{margin-top:24px;font-size:11px;color:#8A8880;line-height:1.6}
                         {openRow === idx && (
                           <tr className="bg-[#FAF9F6] border-b border-[#F0EEE9]">
                             <td colSpan={5} className="px-4 py-4">
-                              <p className="text-sm text-[#1A1A18] mb-3">{r.worldviewSummary || 'No summary available.'}</p>
-                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
-                                {activeFlags.map(k => (
-                                  <div key={k} className="flex items-center justify-between text-xs text-[#6B6860] pr-4">
-                                    <span>{FLAG_LABELS[k]}</span><Dots n={r.contentFlags[k]} />
-                                  </div>
-                                ))}
+                              <p className="text-sm text-[#1A1A18] mb-3">{summaryOf(r) || 'No summary available.'}</p>
+                              <div className="mb-3 border-y border-[#F0EEE9] divide-y divide-[#F0EEE9]">
+                                {activeFlags.map(k => {
+                                  const note = r.flagNotes?.[k];
+                                  const hasNote = !!note && r.contentFlags[k] >= 1;
+                                  const fkey = `${idx}_${k}`;
+                                  const isFlagOpen = openFlag === fkey;
+                                  return (
+                                    <div key={k}>
+                                      <button type="button"
+                                        onClick={(e) => { e.stopPropagation(); if (hasNote) setOpenFlag(isFlagOpen ? null : fkey); }}
+                                        className={`w-full flex items-center justify-between py-1.5 text-xs ${hasNote ? 'cursor-pointer hover:text-[#1A1A18]' : 'cursor-default'}`}>
+                                        <span className="flex items-center gap-1.5 text-[#6B6860]">
+                                          {FLAG_LABELS[k]}
+                                          {hasNote && <span className="text-[#8A8880] text-[9px]">{isFlagOpen ? '▲' : '▼'}</span>}
+                                        </span>
+                                        <Dots n={r.contentFlags[k]} />
+                                      </button>
+                                      {isFlagOpen && hasNote && (
+                                        <p className="text-xs text-[#6B6860] pb-2 pl-1 pr-6">{note}</p>
+                                      )}
+                                    </div>
+                                  );
+                                })}
                               </div>
                               {r.themes.length > 0 && <p className="text-xs text-[#6B6860] mb-1"><span className="text-[#8A8880]">Themes:</span> {r.themes.join(' · ')}</p>}
-                              {r.cautions.length > 0 && <p className="text-xs" style={{ color: '#8A6A20' }}><span className="text-[#8A8880]">Cautions:</span> {r.cautions.join(' · ')}</p>}
+                              {cautionsOf(r).length > 0 && <p className="text-xs" style={{ color: '#8A6A20' }}><span className="text-[#8A8880]">Cautions:</span> {cautionsOf(r).join(' · ')}</p>}
                             </td>
                           </tr>
                         )}
