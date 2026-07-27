@@ -56,6 +56,7 @@ export default function CatalogPage() {
   const [query, setQuery] = useState('');
   const [openRow, setOpenRow] = useState<number | null>(null);
   const [limited, setLimited] = useState(false);
+  const [faithBased, setFaithBased] = useState(true);
   const cancelRef = useRef(false);
 
   // Email gate: remembered per browser so returning visitors skip it.
@@ -71,6 +72,8 @@ export default function CatalogPage() {
     try {
       const saved = localStorage.getItem(LEAD_KEY);
       if (saved) setLeadEmail(saved);
+      const fb = localStorage.getItem('slantscanner_faith');
+      if (fb !== null) setFaithBased(fb === '1');
     } catch { /* ignore */ }
     setHydrated(true);
   }, []);
@@ -156,12 +159,19 @@ export default function CatalogPage() {
     setScanning(false);
   };
 
+  // Faith-based institutions want spiritual/supernatural content flagged; secular
+  // ones don't. This toggle drops the occult + spiritual flags from the table,
+  // the CSV, and the exported report.
+  const activeFlags = faithBased
+    ? FLAG_KEYS
+    : FLAG_KEYS.filter(k => k !== 'spiritual' && k !== 'occult');
+
   const exportCsv = () => {
-    const flagHead = FLAG_KEYS.map(k => FLAG_LABELS[k]);
+    const flagHead = activeFlags.map(k => FLAG_LABELS[k]);
     const header = ['Title', 'Author', 'ISBN', 'Score', 'Worldview', 'Age band', 'Confidence', ...flagHead, 'Cautions'];
     const lines = results.map(r => [
       r.title, r.author, r.isbn ?? '', r.recognized ? r.overallScore : '', r.worldview, r.ageBand, r.confidence,
-      ...FLAG_KEYS.map(k => r.contentFlags[k as keyof ContentFlags]), r.cautions.join('; '),
+      ...activeFlags.map(k => r.contentFlags[k]), r.cautions.join('; '),
     ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
     const blob = new Blob([[header.join(','), ...lines].join('\n')], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -193,7 +203,7 @@ export default function CatalogPage() {
       a.recognized !== b.recognized ? (a.recognized ? -1 : 1) : a.overallScore - b.overallScore);
 
     const rows = ordered.map((r, i) => {
-      const flags = FLAG_KEYS.filter(k => r.contentFlags[k] >= 1).map(k => {
+      const flags = activeFlags.filter(k => r.contentFlags[k] >= 1).map(k => {
         const v = r.contentFlags[k];
         const bg = v >= 3 ? '#FDEAEA' : v >= 2 ? '#FDF3DC' : '#EFEEEA';
         const col = v >= 3 ? '#B84040' : v >= 2 ? '#8A6A20' : '#8A8880';
@@ -398,6 +408,12 @@ footer{margin-top:24px;font-size:11px;color:#8A8880;line-height:1.6}
                 <option value="score-desc">Highest score first</option>
                 <option value="title">Title A–Z</option>
               </select>
+              <label className="flex items-center gap-2 text-xs text-[#6B6860] cursor-pointer select-none px-1"
+                title="Faith-based institutions see spiritual & supernatural content as a concern; turn off for a secular collection.">
+                <input type="checkbox" checked={faithBased}
+                  onChange={e => { setFaithBased(e.target.checked); try { localStorage.setItem('slantscanner_faith', e.target.checked ? '1' : '0'); } catch { /* ignore */ } }} />
+                Faith-based institution
+              </label>
               {!scanning && (
                 <>
                   <button onClick={exportReport} className="text-sm px-4 py-2 rounded-md text-white bg-[#1A1A18] hover:opacity-90 transition-opacity">📄 Report</button>
@@ -420,7 +436,7 @@ footer{margin-top:24px;font-size:11px;color:#8A8880;line-height:1.6}
                 <tbody>
                   {shown.map((r, i) => {
                     const idx = results.indexOf(r);
-                    const flagsTotal = FLAG_KEYS.reduce((s, k) => s + r.contentFlags[k], 0);
+                    const flagsTotal = activeFlags.reduce((s, k) => s + r.contentFlags[k], 0);
                     return (
                       <Fragment key={idx}>
                         <tr className="border-b border-[#F0EEE9] hover:bg-[#FAF9F6] cursor-pointer" onClick={() => setOpenRow(openRow === idx ? null : idx)}>
@@ -444,7 +460,7 @@ footer{margin-top:24px;font-size:11px;color:#8A8880;line-height:1.6}
                             <td colSpan={5} className="px-4 py-4">
                               <p className="text-sm text-[#1A1A18] mb-3">{r.worldviewSummary || 'No summary available.'}</p>
                               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
-                                {FLAG_KEYS.map(k => (
+                                {activeFlags.map(k => (
                                   <div key={k} className="flex items-center justify-between text-xs text-[#6B6860] pr-4">
                                     <span>{FLAG_LABELS[k]}</span><Dots n={r.contentFlags[k]} />
                                   </div>
