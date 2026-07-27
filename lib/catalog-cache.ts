@@ -20,7 +20,7 @@ const STORE_NAME = 'catalog-analyses';
  * Stamped on every cached entry. Bump this whenever the model or the rubric
  * changes so existing entries are treated as misses and re-analyzed.
  */
-export const ANALYSIS_VERSION = 'sonnet5-rubric1';
+export const ANALYSIS_VERSION = 'sonnet5-rubric2-dualscore';
 
 type CacheEntry = {
   v: string;

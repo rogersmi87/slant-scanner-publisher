@@ -28,8 +28,14 @@ export type CatalogTitleReport = {
   isbn?: string;
   recognized: boolean;
   confidence: Confidence;
-  /** 0–100: alignment with conservative / traditional family values (higher = more aligned). */
-  overallScore: number;
+  /** 0–100 Content Suitability (secular lens): objective content maturity only —
+   *  violence / language / sexuality / substances. Worldview & the supernatural
+   *  are neutral. Higher = cleaner / more broadly suitable. */
+  contentScore: number;
+  /** 0–100 Worldview Alignment (faith lens): alignment with a conservative /
+   *  traditional Christian family worldview — content PLUS worldview & spiritual
+   *  elements. Higher = more aligned. */
+  alignmentScore: number;
   /** Dominant worldview lens, one short phrase. */
   worldview: string;
   worldviewSummary: string;

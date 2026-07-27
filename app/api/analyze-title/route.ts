@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 // title. Bump ANALYSIS_VERSION in lib/catalog-cache.ts if this changes.
 const MODEL = 'claude-sonnet-5';
 
-const ANALYSIS_PROMPT = `You are Slant Scanner, a worldview-and-content analysis tool used by school and library staff to audit a book collection. You are given a book's title and author (and sometimes ISBN). Using your knowledge of the PUBLISHED book, return a structured JSON assessment from a conservative/traditional family-values perspective.
+const ANALYSIS_PROMPT = `You are Slant Scanner, a worldview-and-content analysis tool used by school and library staff to audit a book collection. You are given a book's title and author (and sometimes ISBN). Using your knowledge of the PUBLISHED book, return a structured JSON assessment. You give TWO INDEPENDENT 0–100 scores — Content Suitability (a secular, content-only read) and Worldview Alignment (a conservative/traditional Christian read) — plus content flags and cautions.
 
 CRITICAL RULES:
 - Analyze the ACTUAL published book. Do NOT invent content.
@@ -24,7 +24,8 @@ Return exactly this structure:
 {
   "recognized": <true|false>,
   "confidence": "high" | "medium" | "low" | "insufficient",
-  "overallScore": <integer 0-100, higher = more aligned with conservative/traditional family values and broadly safe for family audiences>,
+  "contentScore": <integer 0-100 — Content Suitability; see rubric below>,
+  "alignmentScore": <integer 0-100 — Worldview Alignment; see rubric below>,
   "worldview": "<one short phrase for the dominant worldview lens, e.g. 'Christian / Biblical', 'Secular humanist', 'Naturalistic', 'Mixed / ambiguous', 'Not worldview-bearing'>",
   "worldviewSummary": "<1-2 sentences on the book's worldview and overall content fit, referencing what actually happens in the book>",
   "ageBand": "Picture book" | "Early reader" | "Middle grade" | "Young adult" | "Adult",
@@ -42,7 +43,9 @@ Return exactly this structure:
 
 CONTENT FLAG SCALE (each 0-3): 0 = none, 1 = mild/incidental, 2 = moderate, 3 = strong/frequent.
 - "spiritual" flags religious, magical, or supernatural content neutrally (note it; don't treat magic as inherently disqualifying).
-SCORING: 75-100 strongly aligned & family-safe · 55-74 moderately aligned with some tension · 35-54 mixed/ambiguous · 0-34 conflicts with conservative family values. When "recognized" is false, use a neutral 50 and empty themes/cautions.
+SCORE 1 — CONTENT SUITABILITY (secular; objective content ONLY): judge the maturity of violence, language, sexual content, substances, and thematic intensity. WORLDVIEW, RELIGION, MAGIC, and the SUPERNATURAL are NEUTRAL and must NOT lower this score. Bands: 85-100 clean/minimal mature content · 70-84 mild · 50-69 moderate (review for younger grades) · 30-49 strong mature content · 0-29 explicit/graphic.
+SCORE 2 — WORLDVIEW ALIGNMENT (conservative/traditional Christian family read): consider the content above PLUS the dominant worldview, spiritual/occult/supernatural elements, and whether themes affirm or undermine traditional values. Bands: 85-100 strongly aligned & family-safe · 70-84 broadly aligned, minor tension · 50-69 mixed · 30-49 notable conflict · 0-29 strongly conflicts.
+The two scores are INDEPENDENT: a book can score HIGH Content Suitability but LOW Worldview Alignment (e.g. clean-but-magical fantasy), or the reverse. When "recognized" is false, use a neutral 50 for BOTH scores and empty themes/cautions.
 themes: 3-8 tags. cautions: 0-6 short, specific items. Base everything on the real book.`;
 
 export async function POST(req: Request) {
@@ -110,7 +113,8 @@ export async function POST(req: Request) {
     isbn: isbn || undefined,
     recognized: parsed.recognized ?? false,
     confidence: parsed.confidence ?? 'insufficient',
-    overallScore: typeof parsed.overallScore === 'number' ? parsed.overallScore : 50,
+    contentScore: typeof parsed.contentScore === 'number' ? parsed.contentScore : 50,
+    alignmentScore: typeof parsed.alignmentScore === 'number' ? parsed.alignmentScore : 50,
     worldview: parsed.worldview ?? 'Unknown',
     worldviewSummary: parsed.worldviewSummary ?? '',
     ageBand: parsed.ageBand ?? 'Adult',

@@ -144,7 +144,7 @@ export default function CatalogPage() {
         } catch {
           out[idx] = {
             title: row.title, author: row.author, isbn: row.isbn,
-            recognized: false, confidence: 'insufficient', overallScore: 50,
+            recognized: false, confidence: 'insufficient', contentScore: 50, alignmentScore: 50,
             worldview: 'Error', worldviewSummary: 'Analysis failed for this title.',
             ageBand: 'Adult',
             contentFlags: { violence: 0, language: 0, sexuality: 0, substances: 0, occult: 0, spiritual: 0 },
@@ -166,11 +166,16 @@ export default function CatalogPage() {
     ? FLAG_KEYS
     : FLAG_KEYS.filter(k => k !== 'spiritual' && k !== 'occult');
 
+  // Which score to SHOW depends on the lens: secular → Content Suitability,
+  // faith-based → Worldview Alignment. Both are always computed & cached.
+  const scoreOf = (r: CatalogTitleReport) => (faithBased ? r.alignmentScore : r.contentScore);
+  const scoreLabel = faithBased ? 'Alignment' : 'Content';
+
   const exportCsv = () => {
     const flagHead = activeFlags.map(k => FLAG_LABELS[k]);
-    const header = ['Title', 'Author', 'ISBN', 'Score', 'Worldview', 'Age band', 'Confidence', ...flagHead, 'Cautions'];
+    const header = ['Title', 'Author', 'ISBN', 'Content suitability', 'Worldview alignment', 'Worldview', 'Age band', 'Confidence', ...flagHead, 'Cautions'];
     const lines = results.map(r => [
-      r.title, r.author, r.isbn ?? '', r.recognized ? r.overallScore : '', r.worldview, r.ageBand, r.confidence,
+      r.title, r.author, r.isbn ?? '', r.recognized ? r.contentScore : '', r.recognized ? r.alignmentScore : '', r.worldview, r.ageBand, r.confidence,
       ...activeFlags.map(k => r.contentFlags[k]), r.cautions.join('; '),
     ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
     const blob = new Blob([[header.join(','), ...lines].join('\n')], { type: 'text/csv' });
@@ -185,12 +190,18 @@ export default function CatalogPage() {
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     const recognized = results.filter(r => r.recognized);
     const avg = recognized.length
-      ? Math.round(recognized.reduce((s, r) => s + r.overallScore, 0) / recognized.length) : null;
-    const green = recognized.filter(r => r.overallScore >= 65).length;
-    const amberN = recognized.filter(r => r.overallScore >= 45 && r.overallScore < 65).length;
-    const red = recognized.filter(r => r.overallScore < 45).length;
+      ? Math.round(recognized.reduce((s, r) => s + scoreOf(r), 0) / recognized.length) : null;
+    const green = recognized.filter(r => scoreOf(r) >= 65).length;
+    const amberN = recognized.filter(r => scoreOf(r) >= 45 && scoreOf(r) < 65).length;
+    const red = recognized.filter(r => scoreOf(r) < 45).length;
     const withCautions = results.filter(r => r.cautions.length > 0).length;
     const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const lensNote = faithBased
+      ? 'Scored for a faith-based institution — worldview &amp; spiritual content are weighed.'
+      : 'Scored for general (secular) suitability — content only; worldview &amp; the supernatural are neutral.';
+    const hiLbl = faithBased ? 'aligned' : 'clean';
+    const midLbl = faithBased ? 'mixed' : 'review';
+    const loLbl = faithBased ? 'conflicts' : 'mature';
 
     const badge = (score: number, ok: boolean) => {
       if (!ok) return '<span class="score" style="background:#EFEEEA;color:#8A8880">—</span>';
@@ -200,7 +211,7 @@ export default function CatalogPage() {
     };
 
     const ordered = [...results].sort((a, b) =>
-      a.recognized !== b.recognized ? (a.recognized ? -1 : 1) : a.overallScore - b.overallScore);
+      a.recognized !== b.recognized ? (a.recognized ? -1 : 1) : scoreOf(a) - scoreOf(b));
 
     const rows = ordered.map((r, i) => {
       const flags = activeFlags.filter(k => r.contentFlags[k] >= 1).map(k => {
@@ -212,7 +223,7 @@ export default function CatalogPage() {
       return `<tr>
         <td class="num">${i + 1}</td>
         <td><div class="ttl">${esc(r.title)}</div><div class="sub">${esc(r.author || '—')}${r.recognized ? '' : ' · not recognized'}</div></td>
-        <td>${badge(r.overallScore, r.recognized)}</td>
+        <td>${badge(scoreOf(r), r.recognized)}</td>
         <td class="sub">${esc(r.worldview)}</td>
         <td class="sub">${esc(r.ageBand)}</td>
         <td>${flags}</td>
@@ -271,11 +282,12 @@ footer{margin-top:24px;font-size:11px;color:#8A8880;line-height:1.6}
     <h1>Collection Audit Report</h1>
     ${orgLine}
     <p class="meta">${results.length} titles analyzed &middot; ${date}</p>
+    <p class="meta" style="color:#B0761C">${lensNote}</p>
   </header>
   <section class="summary">
     <div class="card"><div class="big">${results.length}</div><div class="lbl">Titles analyzed</div></div>
     <div class="card"><div class="big">${recognized.length}</div><div class="lbl">Recognized</div></div>
-    <div class="card"><div class="big">${avg ?? '—'}</div><div class="lbl">Average score</div></div>
+    <div class="card"><div class="big">${avg ?? '—'}</div><div class="lbl">Avg ${scoreLabel.toLowerCase()} score</div></div>
     <div class="card"><div class="big">${withCautions}</div><div class="lbl">With cautions</div></div>
   </section>
   <div class="dist">
@@ -285,13 +297,13 @@ footer{margin-top:24px;font-size:11px;color:#8A8880;line-height:1.6}
       ${red ? `<span style="flex:${red};background:#B84040"></span>` : ''}
     </div>
     <div class="legend">
-      <span><i style="background:#2E7D52"></i>${green} aligned (65+)</span>
-      <span><i style="background:#C9A227"></i>${amberN} mixed (45–64)</span>
-      <span><i style="background:#B84040"></i>${red} conflicts (&lt;45)</span>
+      <span><i style="background:#2E7D52"></i>${green} ${hiLbl} (65+)</span>
+      <span><i style="background:#C9A227"></i>${amberN} ${midLbl} (45–64)</span>
+      <span><i style="background:#B84040"></i>${red} ${loLbl} (&lt;45)</span>
     </div>
   </div>
   <table>
-    <thead><tr><th></th><th>Title</th><th>Score</th><th>Worldview</th><th>Age</th><th>Content flags</th><th>Cautions</th></tr></thead>
+    <thead><tr><th></th><th>Title</th><th>${scoreLabel}</th><th>Worldview</th><th>Age</th><th>Content flags</th><th>Cautions</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>
   <footer>Slant Scanner analysis is AI-generated editorial guidance, not an authoritative rating. Verify before collection decisions. Unrecognized titles are marked rather than guessed.<br>Generated ${date} &middot; slantscanner.com</footer>
@@ -312,10 +324,10 @@ footer{margin-top:24px;font-size:11px;color:#8A8880;line-height:1.6}
     }
     r.sort((a, b) =>
       sort === 'title' ? a.title.localeCompare(b.title)
-      : sort === 'score-desc' ? b.overallScore - a.overallScore
-      : a.overallScore - b.overallScore);
+      : sort === 'score-desc' ? scoreOf(b) - scoreOf(a)
+      : scoreOf(a) - scoreOf(b));
     return r;
-  }, [results, query, sort]);
+  }, [results, query, sort, faithBased]);
 
   return (
     <div className="min-h-screen" style={{ background: '#F4F1EA', color: '#1A1A18' }}>
@@ -427,7 +439,7 @@ footer{margin-top:24px;font-size:11px;color:#8A8880;line-height:1.6}
                 <thead>
                   <tr className="text-left text-[10px] uppercase tracking-[0.15em] text-[#8A8880] border-b border-[#E2E0DA]">
                     <th className="px-4 py-3">Title</th>
-                    <th className="px-3 py-3">Score</th>
+                    <th className="px-3 py-3" title={faithBased ? 'Worldview Alignment (0–100)' : 'Content Suitability (0–100)'}>{scoreLabel}</th>
                     <th className="px-3 py-3">Worldview</th>
                     <th className="px-3 py-3">Age</th>
                     <th className="px-3 py-3">Flags</th>
@@ -448,7 +460,7 @@ footer{margin-top:24px;font-size:11px;color:#8A8880;line-height:1.6}
                               {r._cached ? ' · cached' : ''}
                             </p>
                           </td>
-                          <td className="px-3 py-3"><ScoreBadge score={r.overallScore} recognized={r.recognized} /></td>
+                          <td className="px-3 py-3"><ScoreBadge score={scoreOf(r)} recognized={r.recognized} /></td>
                           <td className="px-3 py-3 text-xs text-[#6B6860]">{r.worldview}</td>
                           <td className="px-3 py-3 text-xs text-[#6B6860]">{r.ageBand}</td>
                           <td className="px-3 py-3">
