@@ -17,13 +17,13 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: 'Slant Scanner for Publishers',
+  title: 'Slant Scanner',
   description:
-    'Pre-publication worldview analysis for acquisitions editors and marketing directors. Understand how your forthcoming titles will land with values-driven readers before the reviews do.',
+    'Analyze the ideological lean, worldview, and content of books, movies, TV shows, games, and curricula — so your family can make informed choices.',
   openGraph: {
-    title: 'Slant Scanner for Publishers',
+    title: 'Slant Scanner',
     description:
-      'Pre-publication worldview analysis for acquisitions editors and marketing directors.',
+      'Analyze the ideological lean, worldview, and content of books, movies, TV shows, games, and curricula.',
     type: 'website',
   },
 };
