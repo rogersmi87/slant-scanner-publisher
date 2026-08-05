@@ -12,6 +12,7 @@ export default function Footer() {
           <Link href="/about" className="hover:text-[#1A1A18] transition-colors">About</Link>
           <Link href="/catalog" className="hover:text-[#1A1A18] transition-colors">Schools &amp; libraries</Link>
           <Link href="/publishers" className="hover:text-[#1A1A18] transition-colors">For publishers</Link>
+          <Link href="/support" className="hover:text-[#1A1A18] transition-colors">Support</Link>
           <Link href="/privacy" className="hover:text-[#1A1A18] transition-colors">Privacy</Link>
           <Link href="/terms" className="hover:text-[#1A1A18] transition-colors">Terms</Link>
           <a href="mailto:hello@slantscanner.com" className="hover:text-[#1A1A18] transition-colors">Contact</a>

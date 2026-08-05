@@ -16,15 +16,30 @@ const fraunces = Fraunces({
   axes: ['SOFT', 'WONK', 'opsz'],
 });
 
+/* Titles and descriptions use the phrases the audience actually searches with
+   — "worldview", "content check", "appropriate for my kids" — rather than
+   abstract product language. Same keyword bank as the App Store metadata in
+   slant-scanner/store/listing.en-US.json; keep the two in step. */
 export const metadata: Metadata = {
-  title: 'Slant Scanner',
+  metadataBase: new URL('https://www.slantscanner.com'),
+  title: {
+    default: 'Slant Scanner — Worldview & content check for parents',
+    template: '%s',
+  },
   description:
-    'Analyze the ideological lean, worldview, and content of books, movies, TV shows, games, and curricula — so your family can make informed choices.',
+    'Scan a book, movie, show, game, or curriculum and see the worldview, content flags, and a suggested age before your kids do. Five scans a month free, no card.',
   openGraph: {
-    title: 'Slant Scanner',
+    title: 'Slant Scanner — Worldview & content check for parents',
     description:
-      'Analyze the ideological lean, worldview, and content of books, movies, TV shows, games, and curricula.',
+      'Scan a book, movie, show, game, or curriculum and see the worldview, content flags, and a suggested age before your kids do.',
     type: 'website',
+    siteName: 'Slant Scanner',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Slant Scanner — Worldview & content check for parents',
+    description:
+      'See the worldview, content flags, and a suggested age of a book, film, show, game, or curriculum before your kids do.',
   },
 };
 
