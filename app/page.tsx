@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import SiteNav from '@/components/SiteNav';
 import Footer from '@/components/Footer';
 
 export const metadata: Metadata = {
@@ -19,12 +20,13 @@ const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.rogers
 export default function Home() {
   return (
     <>
-      <HomeNav />
+      <SiteNav />
       <main id="main">
         <Hero />
         <WhatYouGet />
         <HowItWorks />
         <Families />
+        <Founder />
         <Pricing />
         <Organizations />
         <Download />
@@ -34,30 +36,36 @@ export default function Home() {
   );
 }
 
-function HomeNav() {
+function Founder() {
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-[#FAFAF8]/95 backdrop-blur-sm border-b border-[#E2E0DA]">
-      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-[#1B2B4B] text-white px-3 py-1 text-sm rounded">
-        Skip to content
-      </a>
-      <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
-        <Link href="/" className="font-serif text-lg font-semibold tracking-tight text-[#1A1A18]">
-          Slant Scanner
-        </Link>
-        <nav className="flex items-center gap-4 sm:gap-8" aria-label="Primary">
-          <a href="#how-it-works" className="hidden md:block text-sm text-[#6B6860] hover:text-[#1A1A18] transition-colors">How it works</a>
-          <a href="#pricing" className="hidden md:block text-sm text-[#6B6860] hover:text-[#1A1A18] transition-colors">Pricing</a>
-          <Link href="/publishers" className="hidden sm:block text-sm text-[#6B6860] hover:text-[#1A1A18] transition-colors">Publishers</Link>
-          <Link href="/catalog" className="hidden sm:block text-sm text-[#6B6860] hover:text-[#1A1A18] transition-colors">Schools &amp; libraries</Link>
-          <a
-            href="#download"
-            className="text-sm font-medium bg-[#1B2B4B] text-white px-4 py-2 rounded hover:bg-[#243a63] transition-colors whitespace-nowrap"
-          >
-            Get the app
-          </a>
-        </nav>
+    <section className="py-20 px-6">
+      <div className="max-w-6xl mx-auto">
+        <div className="grid md:grid-cols-[180px,1fr] gap-8 md:gap-12 items-start max-w-3xl">
+          <img
+            src="/michael-rogers.jpg"
+            alt="Michael Rogers, founder of Slant Scanner"
+            width={360}
+            height={540}
+            className="w-full max-w-[180px] rounded border border-[#E2E0DA] bg-[#EFEEEA] object-cover"
+          />
+          <div>
+            <p className="text-xs tracking-[0.2em] uppercase text-[#6B6860] mb-4">Who builds this</p>
+            <h2 className="font-serif text-3xl font-semibold text-[#1A1A18] mb-4">
+              Built by a homeschool dad, not a corporation.
+            </h2>
+            <p className="text-[#6B6860] leading-relaxed mb-4">
+              I&rsquo;m Michael — a licensed Professional Engineer in southwest Virginia, and a
+              homeschooling father. My day job is analysis: checking data, spotting what&rsquo;s
+              been left out, making sure conclusions hold up. Slant Scanner is that same discipline
+              pointed at what my family reads and watches.
+            </p>
+            <Link href="/about" className="text-sm font-medium text-[#1B2B4B] hover:underline">
+              More about why I built this &rarr;
+            </Link>
+          </div>
+        </div>
       </div>
-    </header>
+    </section>
   );
 }
 

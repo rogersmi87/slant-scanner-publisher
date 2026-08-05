@@ -8,8 +8,9 @@ export default function Footer() {
           Slant Scanner
         </Link>
         <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-[#6B6860]" aria-label="Footer">
-          <Link href="/" className="hover:text-[#1A1A18] transition-colors">Consumer app</Link>
-          <Link href="/" className="hover:text-[#1A1A18] transition-colors">For families</Link>
+          <Link href="/" className="hover:text-[#1A1A18] transition-colors">The app</Link>
+          <Link href="/about" className="hover:text-[#1A1A18] transition-colors">About</Link>
+          <Link href="/catalog" className="hover:text-[#1A1A18] transition-colors">Schools &amp; libraries</Link>
           <Link href="/publishers" className="hover:text-[#1A1A18] transition-colors">For publishers</Link>
           <Link href="/privacy" className="hover:text-[#1A1A18] transition-colors">Privacy</Link>
           <Link href="/terms" className="hover:text-[#1A1A18] transition-colors">Terms</Link>
