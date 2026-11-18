@@ -3,12 +3,12 @@ import SiteNav from '@/components/SiteNav';
 import Footer from '@/components/Footer';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy — Slant Scanner',
+  title: 'Privacy Policy — Media Checker',
   description:
-    'What Slant Scanner collects, who it shares data with, and how to delete your account. Written in plain language.',
+    'What Media Checker collects, who it shares data with, and how to delete your account. Written in plain language.',
 };
 
-const EFFECTIVE = 'August 5, 2026';
+const EFFECTIVE = 'November 17, 2026';
 
 /* Every claim below is grounded in what the app and backend actually do. If the
    data flow changes — a new analytics SDK, a new third-party processor — this
@@ -40,12 +40,12 @@ export default function PrivacyPage() {
             <p className="text-sm text-[#6B6860] mb-10">Effective {EFFECTIVE}</p>
 
             <P>
-              Slant Scanner is built and operated by Michael Rogers. This policy explains what the
-              app collects, why, and who else sees it. It is written to be read, not to be
-              impressive.
+              Media Checker (formerly Slant Scanner) is built and operated by Media Checker LLC
+              (&ldquo;we&rdquo;, &ldquo;us&rdquo;). This policy explains what the app collects, why,
+              and who else sees it. It is written to be read, not to be impressive.
             </P>
             <P>
-              The short version: you need an account to use Slant Scanner, so the app stores your
+              The short version: you need an account to use Media Checker, so the app stores your
               email address and the scans you run. Your scan history is yours — it is never sold,
               and it is not used to build advertising profiles.
             </P>
@@ -77,6 +77,16 @@ export default function PrivacyPage() {
               scan completed) associated with your account, plus crash and performance reports when
               something goes wrong.
             </P>
+            <P>
+              <strong>Notification token.</strong> If you allow notifications, we store a device push
+              token so we can tell you when a scan you left finishes. You can turn this off in your
+              phone&rsquo;s settings at any time.
+            </P>
+            <P>
+              <strong>Referral information.</strong> If you arrived through a partner or affiliate
+              link or code, we record which partner referred you so they can be credited for the
+              subscription.
+            </P>
 
             <H>What we do not collect</H>
             <P>
@@ -106,6 +116,14 @@ export default function PrivacyPage() {
               <li>
                 <strong>HeyCatch</strong> — product analytics. Receives your account identifier,
                 email, and plan so we can understand how the app is actually used.
+              </li>
+              <li>
+                <strong>Insert Affiliate</strong> — credits partners and affiliates for referrals.
+                Receives the referral code or link you used and whether it led to a subscription.
+              </li>
+              <li>
+                <strong>Expo, Apple, and Google push services</strong> — deliver notifications.
+                Receive your device push token.
               </li>
               <li>
                 <strong>Sentry</strong> — crash and error reporting.
@@ -167,7 +185,7 @@ export default function PrivacyPage() {
 
             <H>Children</H>
             <P>
-              Slant Scanner is built for parents, not children. We do not knowingly collect personal
+              Media Checker is built for parents, not children. We do not knowingly collect personal
               information from children under 13. Accounts are intended to belong to the adult in
               the household. If you believe a child has created an account, email us and we will
               remove it.
